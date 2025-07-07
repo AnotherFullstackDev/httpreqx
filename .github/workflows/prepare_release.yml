@@ -39,8 +39,8 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         with:
-          base: "main"
-          branch: "release/${{ github.event.inputs.release_name }}"
+          base: "release/${{ github.event.inputs.release_name }}"
+          branch: "main"
           title: "Merge release/latest into release/${{ github.event.inputs.release_name }}"
           body: "Release `${{ github.event.inputs.release_name }}` - template."
           draft: true
