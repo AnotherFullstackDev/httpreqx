@@ -1,0 +1,25 @@
+package main
+
+const (
+	HeaderAccept             = "Accept"
+	HeaderAcceptEncoding     = "Accept-Encoding"
+	HeaderAcceptLanguage     = "Accept-Language"
+	HeaderAuthorization      = "Authorization"
+	HeaderCacheControl       = "Cache-Control"
+	HeaderContentLength      = "Content-Length"
+	HeaderContentType        = "Content-Type"
+	HeaderCookie             = "Cookie"
+	HeaderHost               = "Host"
+	HeaderOrigin             = "Origin"
+	HeaderReferer            = "Referer"
+	HeaderUserAgent          = "User-Agent"
+	HeaderSetCookie          = "Set-Cookie"
+	HeaderLocation           = "Location"
+	HeaderETag               = "ETag"
+	HeaderIfModifiedSince    = "If-Modified-Since"
+	HeaderIfNoneMatch        = "If-None-Match"
+	HeaderXRequestedWith     = "X-Requested-With"
+	HeaderXForwardedFor      = "X-Forwarded-For"
+	HeaderXFrameOptions      = "X-Frame-Options"
+	HeaderStrictTransportSec = "Strict-Transport-Security"
+)
