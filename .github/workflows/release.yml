@@ -1,0 +1,47 @@
+name: Auto Release on release/* merge
+
+on:
+  pull_request:
+    branches:
+      - 'release/**'
+    types:
+      - closed
+
+jobs:
+  tag-and-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Extract version from PR title
+        id: version
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          if [[ "$title" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            echo "version=v${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "Missing version in PR title"
+            exit 1
+          fi
+
+      - name: Create tag
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Create GitHub Release with PR body
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: ${{ github.event.pull_request.body }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
