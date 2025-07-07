@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"slices"
 )
 
 type RequestOptions struct {
@@ -11,7 +10,7 @@ type RequestOptions struct {
 	Headers           map[string]string
 	OnRequestReady    OnRequestReadyHook
 	OnResponseReady   OnResponseReadyHook
-	OnErrorHooks      []func(req *http.Request, resp *http.Response, err error, body interface{})
+	OnErrorHooks      []onErrorHook
 	StackTraceEnabled bool
 }
 
@@ -22,7 +21,7 @@ func (o *RequestOptions) Clone() *RequestOptions {
 		Headers:           make(map[string]string),
 		OnRequestReady:    o.OnRequestReady,
 		OnResponseReady:   o.OnResponseReady,
-		OnErrorHooks:      slices.Clone(o.OnErrorHooks),
+		OnErrorHooks:      append([]onErrorHook{}, o.OnErrorHooks...),
 		StackTraceEnabled: o.StackTraceEnabled,
 	}
 
@@ -64,7 +63,7 @@ func (o *RequestOptions) SetOnResponseReady(onResponseReady OnResponseReadyHook)
 
 func (o *RequestOptions) SetDumpOnError() {
 	o.SetStackTraceEnabled(true)
-	o.OnErrorHooks = make([]func(req *http.Request, resp *http.Response, err error, body interface{}), 0)
+	o.OnErrorHooks = make([]onErrorHook, 0)
 	o.OnErrorHooks = append(o.OnErrorHooks, func(req *http.Request, resp *http.Response, err error, body interface{}) {
 		dumpRequest(req)
 		dumpResponse(resp)
