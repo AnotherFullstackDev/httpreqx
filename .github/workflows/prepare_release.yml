@@ -42,5 +42,5 @@ jobs:
           base: "release/${{ github.event.inputs.release_name }}"
           branch: "main"
           title: "Merge release/latest into release/${{ github.event.inputs.release_name }}"
-          body: "Release `${{ github.event.inputs.release_name }}` - template."
+          body: "Release `${{ github.event.inputs.release_name }}` - template"
           draft: true
