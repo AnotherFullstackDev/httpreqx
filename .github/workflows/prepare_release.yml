@@ -37,9 +37,10 @@ jobs:
           git push origin "$RELEASE_BRANCH"
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           base: "main"
           branch: "release/${{ github.event.inputs.release_name }}"
           title: "Merge release/latest into release/${{ github.event.inputs.release_name }}"
           body: "Release `${{ github.event.inputs.release_name }}` - template."
+          draft: true
