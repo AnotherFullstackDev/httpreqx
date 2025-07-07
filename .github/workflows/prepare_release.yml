@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: "release/latest"
 
       - name: Create release branch from release/latest
         run: |
@@ -37,7 +39,7 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@v6
         with:
-          base: "release/${{ github.event.inputs.release_name }}"
-          branch: "main"
+          base: "main"
+          branch: "release/${{ github.event.inputs.release_name }}"
           title: "Merge release/latest into release/${{ github.event.inputs.release_name }}"
           body: "Release `${{ github.event.inputs.release_name }}` - template."
