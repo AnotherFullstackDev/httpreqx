@@ -40,4 +40,4 @@ jobs:
           base: "release/${{ github.event.inputs.release_name }}"
           branch: "main"
           title: "Merge release/latest into release/${{ github.event.inputs.release_name }}"
-          body: "Automated PR to prepare release `${{ github.event.inputs.release_name }}` from main."
+          body: "Release `${{ github.event.inputs.release_name }}` - template."
