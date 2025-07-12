@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/AnotherFullstackDev/httpreqx"
 	"log"
 	"net/http"
 )
@@ -11,7 +12,7 @@ func main() {
 	ctx := context.Background()
 
 	// simple client
-	c := NewHttpClient().SetBodyUnmarshaler(NewJSONBodyUnmarshaler())
+	c := httpreqx.NewHttpClient().SetBodyUnmarshaler(httpreqx.NewJSONBodyUnmarshaler())
 	var result map[string]any
 	_, err := c.NewPostRequest(ctx, "https://httpbin.org/post", []byte(`{"request_data": 123}`)).
 		WriteBodyTo(&result).
@@ -19,9 +20,9 @@ func main() {
 	log.Println(result, err)
 
 	// JSON client
-	c = NewHttpClient().
-		SetBodyMarshaler(NewJSONBodyMarshaler()).
-		SetBodyUnmarshaler(NewJSONBodyUnmarshaler())
+	c = httpreqx.NewHttpClient().
+		SetBodyMarshaler(httpreqx.NewJSONBodyMarshaler()).
+		SetBodyUnmarshaler(httpreqx.NewJSONBodyUnmarshaler())
 
 	var result1 map[string]any
 	_, err = c.NewGetRequest(ctx, "https://httpbin.org/uuid").
@@ -42,7 +43,7 @@ func main() {
 	clone := c.Clone().
 		SetOnRequestReady(func(req *http.Request) error {
 			log.Println("OnRequestReady")
-			clonedBody, err := CloneRequestBody(req)
+			clonedBody, err := httpreqx.CloneRequestBody(req)
 			if err != nil {
 				return err
 			}
@@ -81,7 +82,7 @@ func main() {
 	log.Println(err)
 
 	// With stack traces only
-	c = NewHttpClient().SetStackTraceEnabled(true)
+	c = httpreqx.NewHttpClient().SetStackTraceEnabled(true)
 	_, err = c.NewGetRequest(ctx, "https://httpbin.org/status/401").Do()
 	log.Println(err)
 }

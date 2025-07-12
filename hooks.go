@@ -1,4 +1,4 @@
-package main
+package httpreqx
 
 import "net/http"
 
