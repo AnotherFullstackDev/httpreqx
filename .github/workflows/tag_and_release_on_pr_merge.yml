@@ -1,0 +1,34 @@
+name: Auto Release on PR merge
+
+on:
+  pull_request:
+    branches:
+      - 'release/**'
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  tag-and-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract version from PR title
+        id: version
+        run: |
+          title="${{ github.event.pull_request.title }}"
+          if [[ "$title" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            echo "version=v${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "Missing version in PR title"
+            exit 1
+          fi
+
+      - name: Call reusable tag-and-release workflow
+        uses: ./.github/workflows/tag_and_release.yml
+        with:
+          version: ${{ steps.version.outputs.version }}
+          body: ${{ github.event.pull_request.body }}
