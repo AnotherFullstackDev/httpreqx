@@ -34,4 +34,4 @@ jobs:
         uses: ./.github/workflows/tag_and_release.yml
         with:
           version: ${{ steps.version.outputs.version }}
-          body: ${{ github.event.pull_request.body }}
+          release_notes: ${{ github.event.pull_request.body }}
