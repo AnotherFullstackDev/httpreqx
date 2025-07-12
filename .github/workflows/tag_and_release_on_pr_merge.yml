@@ -11,11 +11,17 @@ permissions:
   contents: write
 
 jobs:
-  tag-and-release:
+  extract-version-and-notes:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_notes: ${{ steps.release_notes.outputs.release_notes }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Extract version from PR title
         id: version
         run: |
@@ -26,12 +32,16 @@ jobs:
             echo "Missing version in PR title"
             exit 1
           fi
+      - name: Extract PR body for release notes
+        id: release_notes
+        run: |
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Call reusable tag-and-release workflow
-        uses: ./.github/workflows/tag_and_release.yml
-        with:
-          version: ${{ steps.version.outputs.version }}
-          release_notes: ${{ github.event.pull_request.body }}
+  tag_and_release:
+    needs: extract-version-and-notes
+    uses: ./.github/workflows/tag_and_release.yml
+    with:
+      version: ${{ needs.extract-version-and-notes.outputs.version }}
+      release_notes: ${{ needs.extract-version-and-notes.outputs.release_notes }}
