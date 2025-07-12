@@ -20,7 +20,7 @@ jobs:
         id: version
         run: |
           title="${{ github.event.pull_request.title }}"
-          if [[ "$title" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+          if [[ "$title" =~ ([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.\-]+)?(\+[a-zA-Z0-9.\-]+)?) ]]; then
             echo "version=v${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
           else
             echo "Missing version in PR title"
