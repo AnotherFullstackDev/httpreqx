@@ -5,13 +5,6 @@ import (
 	"time"
 )
 
-// Goals
-//
-// - API must follow and use the native golang API as much as possible.
-// - No useless operations, like unnecessary unmarshalling or so.
-// - Chain based style of usage. Avoid unnecessary imports and extra error handling.
-// - No global state to make it goroutine safe.
-
 type HttpClient struct {
 	client         *http.Client
 	requestOptions *RequestOptions
@@ -36,7 +29,7 @@ func (c *HttpClient) Clone() *HttpClient {
 	return clone
 }
 
-func (c *HttpClient) Do(req *http.Request) (*http.Response, error) {
+func (c *HttpClient) do(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
