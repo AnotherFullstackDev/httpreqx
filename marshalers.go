@@ -75,7 +75,7 @@ func (m *NoopBodyMarshaler) Marshal(body interface{}, writer io.Writer) error {
 	return err
 }
 
-func (m *NoopBodyMarshaler) OnRequestReady(req *http.Request) error {
+func (m *NoopBodyMarshaler) OnRequestReady(_ *http.Request) error {
 	return nil
 }
 

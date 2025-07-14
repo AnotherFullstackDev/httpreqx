@@ -76,6 +76,7 @@ func (c *HttpClient) NewTraceRequest(ctx context.Context, path string) *Request 
 func (r *Request) WriteBodyTo(result interface{}) *Request {
 	r.unmarshalResultTo = result
 	r.unmarshalResult = true
+
 	return r
 }
 
@@ -138,6 +139,7 @@ func (r *Request) Do() (*http.Response, error) {
 
 	// TODO: consider using sync.Pool to reuse buffers for the request body. Might be beneficial for performance in high-load scenarios.
 	bodyBuffer := &bytes.Buffer{}
+
 	if r.body != nil {
 		bodyMarshaler := r.options.BodyMarshaler
 

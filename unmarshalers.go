@@ -57,14 +57,18 @@ func (u *NoopBodyUnmarshaler) Unmarshal(result interface{}, reader io.Reader) er
 		if _, err := io.Copy(buf, reader); err != nil {
 			return err
 		}
+
 		*v = buf.Bytes()
+
 		return nil
 	case *string:
 		buf := &bytes.Buffer{}
 		if _, err := io.Copy(buf, reader); err != nil {
 			return err
 		}
+
 		*v = buf.String()
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported result destination for NoopBodyUnmarshaler: %T", result)
@@ -74,7 +78,7 @@ func (u *NoopBodyUnmarshaler) Unmarshal(result interface{}, reader io.Reader) er
 	return err
 }
 
-func (u *NoopBodyUnmarshaler) OnRequestReady(req *http.Request) error {
+func (u *NoopBodyUnmarshaler) OnRequestReady(_ *http.Request) error {
 	return nil
 }
 

@@ -36,6 +36,7 @@ func (c *HttpClient) Clone() *HttpClient {
 		},
 		requestOptions: c.requestOptions.Clone(),
 	}
+
 	return clone
 }
 

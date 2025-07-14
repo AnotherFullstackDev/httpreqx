@@ -44,6 +44,7 @@ func (o *RequestOptions) SetHeaders(headers map[string]string) {
 	if o.Headers == nil {
 		o.Headers = make(map[string]string)
 	}
+
 	for k, v := range headers {
 		o.Headers[k] = v
 	}
@@ -64,7 +65,7 @@ func (o *RequestOptions) SetOnResponseReady(onResponseReady OnResponseReadyHook)
 func (o *RequestOptions) SetDumpOnError() {
 	o.SetStackTraceEnabled(true)
 	o.OnErrorHooks = make([]onErrorHook, 0)
-	o.OnErrorHooks = append(o.OnErrorHooks, func(req *http.Request, resp *http.Response, err error, body interface{}) {
+	o.OnErrorHooks = append(o.OnErrorHooks, func(req *http.Request, resp *http.Response, _ error, body interface{}) {
 		dumpRequest(req)
 		dumpResponse(resp)
 		dumpBody(body)
