@@ -1049,4 +1049,19 @@ func TestRequestExecution(t *testing.T) {
 		r.NotNil(resp)
 		r.Contains(err.Error(), "body unmarshaler is not set")
 	})
+
+	t.Run("Request with response timeout", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(100 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		client := NewHttpClient().SetTimeout(50 * time.Millisecond)
+		ctx := context.Background()
+		resp, err := client.NewGetRequest(ctx, server.URL).Do()
+		r.Error(err)
+		r.Nil(resp)
+		r.ErrorContains(err, "context deadline exceeded")
+	})
 }
