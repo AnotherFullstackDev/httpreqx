@@ -91,13 +91,13 @@ func (r *Request) SetBodyUnmarshaler(unmarshaler BodyUnmarshaler) *Request {
 	return r
 }
 
-// SetHeaders sets the headers for the request. This will override any headers set at the client level but only for this request.
+// SetHeaders sets the headers for the request. This will override headers with the same name set at the client level but only for this request.
 func (r *Request) SetHeaders(headers map[string]string) *Request {
 	r.options.SetHeaders(headers)
 	return r
 }
 
-// SetHeader sets a single header for the request. This will override any headers set at the client level but only for this request.
+// SetHeader sets a single header for the request. This will override header with the same name set at the client level but only for this request.
 func (r *Request) SetHeader(key, value string) *Request {
 	r.options.SetHeader(key, value)
 	return r
@@ -119,7 +119,7 @@ func (r *Request) SetOnResponseReady(onResponseReady OnResponseReadyHook) *Reque
 
 // SetDumpOnError configures logging of the request, response and error when an error occurs.
 // http.Request and http.Response bodies will be logged as well, if they are set.
-// original, body passed by the caller code will be logged as well, if it is set.
+// Original body passed by the caller code will be logged as well, if it is set.
 // This method will also enable the StackTraceEnabled option, which will add a stack trace to the error if it occurs.
 func (r *Request) SetDumpOnError() *Request {
 	r.options.SetDumpOnError()
@@ -136,7 +136,8 @@ func (r *Request) SetStackTraceEnabled(enabled bool) *Request {
 func (r *Request) Do() (*http.Response, error) {
 	var beforeRequestHooks []OnRequestReadyHook
 
-	bodyBuffer := bytes.NewBuffer(nil)
+	// TODO: consider using sync.Pool to reuse buffers for the request body. Might be beneficial for performance in high-load scenarios.
+	bodyBuffer := &bytes.Buffer{}
 	if r.body != nil {
 		bodyMarshaler := r.options.BodyMarshaler
 

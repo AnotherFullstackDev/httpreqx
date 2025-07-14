@@ -7,7 +7,7 @@ A thin wrapper around the standard `net/http` package that simplifies sending HT
 ## Features
 
 - **Fluent API**: Chain-based method calls for easy request building
-- **Marshalers/Unmarshalers**: Built-in JSON support with extensible interface
+- **Marshalers/Unmarshalers**: Built-in JSON, bytes, string support with extensible interface
 - **Request/Response Hooks**: Middleware-like functionality for request/response processing
 - **Error Handling**: Optional request/response dumping and stack traces for debugging
 - **Native Go Integration**: Built on top of standard `net/http` package with zero external dependencies
@@ -33,17 +33,20 @@ import (
 func main() {
     ctx := context.Background()
     
-    // Create a new HTTP client
+    // Create a new HTTP client (uses NoopBodyMarshaler and NoopBodyUnmarshaler by default)
     client := httpreqx.NewHttpClient()
     
-    // Simple GET request
-    resp, err := client.NewGetRequest(ctx, "https://httpbin.org/get").Do()
+    // Simple GET request with response body capture
+    var responseBody string
+    resp, err := client.NewGetRequest(ctx, "https://httpbin.org/get").
+        WriteBodyTo(&responseBody).
+        Do()
     if err != nil {
         log.Fatal(err)
     }
-    defer resp.Body.Close()
     
     fmt.Printf("Status: %s\n", resp.Status)
+    fmt.Printf("Response: %s\n", responseBody)
 }
 ```
 
@@ -53,13 +56,15 @@ func main() {
 
 ```go
 ctx := context.Background()
-client := httpreqx.NewHttpClient()
+client := httpreqx.NewHttpClient() // Uses NoopBodyMarshaler by default
 
 // GET request
 resp, err := client.NewGetRequest(ctx, "https://api.example.com/users").Do()
 
-// POST request with raw body
+// POST request with different body types (NoopBodyMarshaler supports all of these)
 resp, err = client.NewPostRequest(ctx, "https://api.example.com/users", []byte(`{"name": "John"}`)).Do()
+resp, err = client.NewPostRequest(ctx, "https://api.example.com/users", `{"name": "John"}`).Do() // string
+resp, err = client.NewPostRequest(ctx, "https://api.example.com/users", strings.NewReader(`{"name": "John"}`)).Do() // io.Reader
 
 // PUT request
 resp, err = client.NewPutRequest(ctx, "https://api.example.com/users/1", []byte(`{"name": "Jane"}`)).Do()
@@ -105,6 +110,8 @@ if err != nil {
 fmt.Printf("Result: %+v\n", result)
 ```
 
+**Note:** The JSON marshaler adds a newline at the end of the JSON body, which is a requirement for the JSON format specification.
+
 ### Manual Response Body Handling
 
 ```go
@@ -122,6 +129,38 @@ if err != nil {
 }
 
 fmt.Printf("Raw response: %s\n", string(body))
+```
+
+### Raw Response Body Handling
+
+The library comes with a `NoopBodyUnmarshaler` that allows you to capture raw response bodies in different formats:
+
+```go
+ctx := context.Background()
+client := httpreqx.NewHttpClient() // Uses NoopBodyUnmarshaler by default
+
+// Capture as []byte
+var bodyBytes []byte
+resp, err := client.NewGetRequest(ctx, "https://api.example.com/data").
+    WriteBodyTo(&bodyBytes).
+    Do()
+
+// Capture as string
+var bodyString string
+resp, err = client.NewGetRequest(ctx, "https://api.example.com/data").
+    WriteBodyTo(&bodyString).
+    Do()
+
+// Stream directly to a writer (e.g., file)
+file, err := os.Create("response.txt")
+if err != nil {
+    log.Fatal(err)
+}
+defer file.Close()
+
+resp, err = client.NewGetRequest(ctx, "https://api.example.com/data").
+    WriteBodyTo(file). // Streams directly to file
+    Do()
 ```
 
 ### Custom Headers
@@ -232,13 +271,30 @@ resp, err := client.NewGetRequest(ctx, "https://slow-api.example.com/data").Do()
 
 ## Important Notes
 
+### Default Behavior
+
+By default, `NewHttpClient()` creates a client with:
+- **20-second timeout**
+- **NoopBodyMarshaler** - handles raw bytes and common types for request bodies
+- **NoopBodyUnmarshaler** - handles raw response bodies with support for `io.Writer`, `*[]byte`, and `*string`
+
+This means you can immediately start using `WriteBodyTo()` with basic types without additional configuration:
+
+```go
+client := httpreqx.NewHttpClient()
+
+// Works out of the box
+var response string
+resp, err := client.NewGetRequest(ctx, url).WriteBodyTo(&response).Do()
+```
+
 ### Resource Management
 
 **Always use `WriteBodyTo()` when possible** - it automatically handles response body consumption and closing to prevent resource leaks.
 
 ```go
 // ✅ Recommended: Automatic resource management
-var result map[string]interface{}
+var result string // or []byte, or io.Writer
 resp, err := client.NewGetRequest(ctx, url).WriteBodyTo(&result).Do()
 
 // ❌ Manual management: You must close the body yourself
@@ -256,38 +312,50 @@ Most configuration methods can be set at both the client and request level:
 - **Client-level**: Affects all requests made by that client
 - **Request-level**: Overrides client settings for that specific request only
 
+**Header Merging Behavior:**
+- Client-level headers are applied to all requests
+- Request-level headers are merged with client-level headers
+- Request-level headers override client-level headers with the same name
+- Headers with different names are combined
+
 ```go
 // Client-level configuration
 client := httpreqx.NewHttpClient().
     SetHeader("User-Agent", "MyApp/1.0").
+    SetHeader("Authorization", "Bearer token123").
     SetBodyMarshaler(httpreqx.NewJSONBodyMarshaler())
 
 // Request-level override (doesn't affect client)
 resp, err := client.NewGetRequest(ctx, url).
-    SetHeader("User-Agent", "SpecialRequest/1.0").  // Overrides client setting
+    SetHeader("User-Agent", "SpecialRequest/1.0").  // Overrides client's User-Agent
+    SetHeader("X-Request-ID", "req-456").           // Adds new header
     SetBodyMarshaler(httpreqx.NewNoopBodyMarshaler()). // Overrides client setting
     Do()
+// Final headers: User-Agent: SpecialRequest/1.0, Authorization: Bearer token123, X-Request-ID: req-456
 ```
 
 ## API Reference
 
 ### HttpClient Methods
 
-- `NewHttpClient() *HttpClient` - Creates a new HTTP client with default settings
-- `(*HttpClient) Clone() *HttpClient` - Creates a copy of the client with the same configuration
-- `(*HttpClient) SetTimeout(timeout time.Duration) *HttpClient` - Sets the request timeout
-- `(*HttpClient) SetHeader(key, value string) *HttpClient` - Sets a single header
-- `(*HttpClient) SetHeaders(headers map[string]string) *HttpClient` - Sets multiple headers
-- `(*HttpClient) SetBodyMarshaler(marshaler BodyMarshaler) *HttpClient` - Sets the body marshaler
-- `(*HttpClient) SetBodyUnmarshaler(unmarshaler BodyUnmarshaler) *HttpClient` - Sets the body unmarshaler
-- `(*HttpClient) SetOnRequestReady(hook OnRequestReadyHook) *HttpClient` - Sets request hook
-- `(*HttpClient) SetOnResponseReady(hook OnResponseReadyHook) *HttpClient` - Sets response hook
-- `(*HttpClient) SetDumpOnError() *HttpClient` - Enables request/response dumping on errors
-- `(*HttpClient) SetStackTraceEnabled(enabled bool) *HttpClient` - Enables/disables stack traces
+- `NewHttpClient() *HttpClient` - Creates a new HTTP client with default settings:
+  - 20-second timeout
+  - NoopBodyMarshaler (handles raw bytes, string, and io.Reader for request bodies)
+  - NoopBodyUnmarshaler (handles raw response bodies to io.Writer, *[]byte, and *string)
+- `(*HttpClient) Clone() *HttpClient` - Creates a copy of the client with the same configuration. The cloned client can be modified independently without affecting the original client.
+- `(*HttpClient) SetTimeout(timeout time.Duration) *HttpClient` - Sets the timeout for the underlying http.Client. This timeout will apply to all requests made with this client.
+- `(*HttpClient) SetHeader(key, value string) *HttpClient` - Sets a single header at the HttpClient level. Headers merging and override precedence is the same as with SetHeaders.
+- `(*HttpClient) SetHeaders(headers map[string]string) *HttpClient` - Sets headers at the HttpClient level. Headers will affect all requests made with this client. When headers are set at the request level, they will be merged with client-level headers, with request-level headers taking precedence.
+- `(*HttpClient) SetBodyMarshaler(marshaler BodyMarshaler) *HttpClient` - Sets the BodyMarshaler at the HttpClient level. This will affect all requests made with this client unless overridden at the request level.
+- `(*HttpClient) SetBodyUnmarshaler(unmarshaler BodyUnmarshaler) *HttpClient` - Sets the BodyUnmarshaler at the HttpClient level. This will affect all requests made with this client unless overridden at the request level.
+- `(*HttpClient) SetOnRequestReady(hook OnRequestReadyHook) *HttpClient` - Sets a hook that will be called right after an http.Request is created and all headers and body are set. This hook will be called for all requests made with this client unless overridden at the request level.
+- `(*HttpClient) SetOnResponseReady(hook OnResponseReadyHook) *HttpClient` - Sets a hook that will be called right after the response is received and before it is processed. This hook will be called for all requests made with this client unless overridden at the request level.
+- `(*HttpClient) SetDumpOnError() *HttpClient` - Configures logging of the request, response and error when an error occurs. http.Request and http.Response bodies will be logged as well, if they are set. Original body passed by the caller code will be logged as well. This method will also enable the StackTraceEnabled option. This will affect all requests made with this client unless overridden at the request level.
+- `(*HttpClient) SetStackTraceEnabled(enabled bool) *HttpClient` - Enables or disables the stack trace in the error if it occurs. This will affect all requests made with this client unless overridden at the request level.
 
 ### Request Creation Methods
 
-- `(*HttpClient) NewRequest(ctx context.Context, method, path string, body interface{}) *Request` - Creates a generic request (mostly used internally)
+- `(*HttpClient) NewRequest(ctx context.Context, method, path string, body interface{}) *Request` - Creates a new Request with the specified method, path, and body. Mostly used internally. For convenience, use NewGetRequest, NewPostRequest, etc.
 - `(*HttpClient) NewGetRequest(ctx context.Context, path string) *Request` - Creates a GET request
 - `(*HttpClient) NewPostRequest(ctx context.Context, path string, body interface{}) *Request` - Creates a POST request
 - `(*HttpClient) NewPutRequest(ctx context.Context, path string, body interface{}) *Request` - Creates a PUT request
@@ -300,22 +368,23 @@ resp, err := client.NewGetRequest(ctx, url).
 
 ### Request Configuration Methods
 
-- `(*Request) WriteBodyTo(result interface{}) *Request` - Unmarshals response body to the provided variable. Automatically handles body consumption and closing to prevent resource leaks. This is the recommended way to handle response bodies.
-- `(*Request) SetHeader(key, value string) *Request` - Sets a header for this request (overrides client-level headers)
-- `(*Request) SetHeaders(headers map[string]string) *Request` - Sets multiple headers for this request (overrides client-level headers)
-- `(*Request) SetBodyMarshaler(marshaler BodyMarshaler) *Request` - Sets marshaler for this request (doesn't affect the client)
-- `(*Request) SetBodyUnmarshaler(unmarshaler BodyUnmarshaler) *Request` - Sets unmarshaler for this request (doesn't affect the client)
-- `(*Request) SetOnRequestReady(hook OnRequestReadyHook) *Request` - Sets request hook for this request (called after request is created and headers/body are set)
-- `(*Request) SetOnResponseReady(hook OnResponseReadyHook) *Request` - Sets response hook for this request (called after response is received, before processing)
-- `(*Request) SetDumpOnError() *Request` - Enables dumping for this request (logs request, response, and original body on errors; also enables stack traces)
-- `(*Request) SetStackTraceEnabled(enabled bool) *Request` - Enables/disables stack traces for this request
-- `(*Request) Do() (*http.Response, error)` - Executes the configured HTTP request and returns the response
+- `(*Request) WriteBodyTo(result interface{}) *Request` - Sets the destination for unmarshalling the response body. This method will consume the response body and close it after reading. This is the recommended way to consume the response body as it prevents resource leaks, provides type safety and a unified way to work with body. In case this method is not used, the caller must close the response body manually after reading it to prevent resource leaks!
+- `(*Request) SetHeader(key, value string) *Request` - Sets a single header for the request. This will override header with the same name set at the client level but only for this request.
+- `(*Request) SetHeaders(headers map[string]string) *Request` - Sets the headers for the request. This will override headers with the same name set at the client level but only for this request.
+- `(*Request) SetBodyMarshaler(marshaler BodyMarshaler) *Request` - Sets the BodyMarshaler at the request level. Does not affect the client.
+- `(*Request) SetBodyUnmarshaler(unmarshaler BodyUnmarshaler) *Request` - Sets the BodyUnmarshaler at the request level. Does not affect the client.
+- `(*Request) SetOnRequestReady(hook OnRequestReadyHook) *Request` - Sets a hook that will be called right after an http.Request is created and all headers and body are set. This method will override any hooks set at the client level, without affecting the client, but only for this request.
+- `(*Request) SetOnResponseReady(hook OnResponseReadyHook) *Request` - Sets a hook that will be called right after the response is received and before it is processed. This method will override any hooks set at the client level, without affecting the client, but only for this request.
+- `(*Request) SetDumpOnError() *Request` - Configures logging of the request, response and error when an error occurs. http.Request and http.Response bodies will be logged as well, if they are set. Original body passed by the caller code will be logged as well. This method will also enable the StackTraceEnabled option, which will add a stack trace to the error if it occurs.
+- `(*Request) SetStackTraceEnabled(enabled bool) *Request` - Enables or disables the stack trace in the error if it occurs.
+- `(*Request) Do() (*http.Response, error)` - Executes the configured HTTP request and returns the http.Response.
 
 ### Built-in Marshalers/Unmarshalers
 
-- `NewJSONBodyMarshaler() BodyMarshaler` - JSON marshaler that sets `Content-Type: application/json`
-- `NewJSONBodyUnmarshaler() BodyUnmarshaler` - JSON unmarshaler that sets `Accept: application/json`
-- `NewNoopBodyMarshaler() BodyMarshaler` - Pass-through marshaler for raw bytes
+- `NewJSONBodyMarshaler() BodyMarshaler` - Creates a BodyMarshaler that marshals the body to JSON format. It automatically sets the Content-Type header to application/json. The body can be any type that is supported by the json.Marshal function. Marshaling is done using the json.NewEncoder function, that uses streaming encoding. A caveat is that a new line is added at the end of the body, which is a requirement for the JSON format.
+- `NewJSONBodyUnmarshaler() BodyUnmarshaler` - Creates a BodyUnmarshaler that unmarshals the response body as JSON format. It automatically sets the Accept header to application/json. Unmarshaling is done via the json.NewDecoder function, that uses streaming decoding.
+- `NewNoopBodyMarshaler() BodyMarshaler` - Creates a BodyMarshaler that does not modify the request body. It allows to create requests by passing the same type as the standard http.NewRequestWithContext accepts, with some additions for convenience. The modifications are: automatically converts string to strings.Reader if the body is a string. Supports `[]byte`, `string`, and `io.Reader` body types.
+- `NewNoopBodyUnmarshaler() BodyUnmarshaler` - Creates a BodyUnmarshaler that does not modify the response body. It simply writes the response body to the destination without any additional processing. Allowed result destinations are: `io.Writer`, `*[]byte`, and `*string`.
 
 ### Utility Functions
 
@@ -372,7 +441,7 @@ client := httpreqx.NewHttpClient().
 ## Compatibility
 
 - Minimum supported Go version: **1.20**
-- Tested with: Go 1.20–1.23
+- Tested with: Go 1.20–1.24
 
 ## License
 

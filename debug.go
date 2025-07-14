@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-//type EnrichedError error
-
 type EnrichedError struct {
 	Err   error
 	Stack string
