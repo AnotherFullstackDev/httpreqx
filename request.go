@@ -187,6 +187,10 @@ func (r *Request) Do() (*http.Response, error) {
 			return
 		}
 
+		if resp == nil || resp.Body == nil {
+			return
+		}
+
 		if err := resp.Body.Close(); err != nil {
 			// Log the error, but do not return it, as we already have a response.
 			fmt.Printf("Error closing response body: %v\n", err)
