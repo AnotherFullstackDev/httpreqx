@@ -1,0 +1,57 @@
+run:
+  timeout: 5m
+  tests: false
+
+linters-settings:
+  lll:
+    line-length: 120
+    tab-width: 1
+    ignore-strings: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go$
+      linters:
+        - all
+    - linters:
+        - lll
+      source: "^//"
+
+linters:
+  enable:
+    - gofmt
+    - revive
+    - govet
+    - errcheck
+    - staticcheck
+    - gosec
+    - prealloc
+    - unconvert
+    - gocritic
+    - unused
+    - ineffassign
+    - typecheck
+    - gosimple
+    - gocyclo
+    - dupl
+    - misspell
+    - unparam
+    - nakedret
+    - lll
+    - gochecknoinits
+    - gochecknoglobals
+    - goconst
+    - gocognit
+    - mnd
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - stylecheck
+    - thelper
+    - tparallel
+    - whitespace
+    - wrapcheck
+    - wsl

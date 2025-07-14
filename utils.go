@@ -14,10 +14,14 @@ func CloneRequestBody(r *http.Request) ([]byte, error) {
 	if r.Body == nil {
 		return nil, nil
 	}
+
 	bodyBytes, err := io.ReadAll(r.Body)
+
 	if err != nil {
 		return nil, err
 	}
+
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	return bodyBytes, nil
 }
